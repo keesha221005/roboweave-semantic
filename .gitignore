@@ -1,0 +1,10 @@
+build/
+install/
+log/
+__pycache__/
+*.pyc
+.vscode/
+collision_report.json
+venv/
+.venv/
+.env
