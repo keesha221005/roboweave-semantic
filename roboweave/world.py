@@ -29,6 +29,16 @@ class Rack:
 
 
 @dataclass
+class Crate:
+    """Box/pallet left in an aisle. Not on the floor plan, and YOLO has no class for it."""
+    x: float  # min corner
+    y: float
+    w: float
+    h: float
+    kind: str = "crate"
+
+
+@dataclass
 class Person:
     x: float
     y: float
@@ -79,12 +89,14 @@ def _circle_rect_hit(cx, cy, r, rk: Rack) -> bool:
 
 
 class World:
-    def __init__(self, width, height, racks, pillars, people, robot):
+    def __init__(self, width, height, racks, pillars, people, robot, crates=None):
         self.width, self.height = width, height
         self.racks, self.pillars, self.people, self.robot = racks, pillars, people, robot
+        self.crates = list(crates or [])
         self.time = 0.0
         self.collisions = 0       # distinct contact events (robot vs anything)
         self._in_contact = False
+        self.min_person_gap = float("inf")
         self._build_segments()
 
     # ---- geometry used by the sensors -------------------------------------
@@ -99,6 +111,11 @@ class World:
             for a, b in [((x0, y0), (x1, y0)), ((x1, y0), (x1, y1)),
                          ((x1, y1), (x0, y1)), ((x0, y1), (x0, y0))]:
                 segs.append((*a, *b)); kinds.append("rack")
+        for cr in self.crates:
+            x0, y0, x1, y1 = cr.x, cr.y, cr.x + cr.w, cr.y + cr.h
+            for a, b in [((x0, y0), (x1, y0)), ((x1, y0), (x1, y1)),
+                         ((x1, y1), (x0, y1)), ((x0, y1), (x0, y0))]:
+                segs.append((*a, *b)); kinds.append("crate")
         self.segments = np.array(segs, dtype=float)
         self.segment_kinds = kinds
 
@@ -112,7 +129,7 @@ class World:
         r = self.robot.r
         if x - r < 0 or y - r < 0 or x + r > self.width or y + r > self.height:
             return True
-        if any(_circle_rect_hit(x, y, r, rk) for rk in self.racks):
+        if any(_circle_rect_hit(x, y, r, rk) for rk in list(self.racks) + list(self.crates)):
             return True
         return any((x - cx) ** 2 + (y - cy) ** 2 < (r + cr) ** 2
                    for cx, cy, cr, _ in self.circles())
@@ -127,14 +144,14 @@ class World:
         nx = rb.x + rb.v * math.cos(th) * dt
         ny = rb.y + rb.v * math.sin(th) * dt
         blocked = self._robot_collides(nx, ny)
-        if blocked:
-            # contact: robot does not move; count one event per contact
-            if not self._in_contact:
-                self.collisions += 1
-            self._in_contact = True
-        else:
+        if not blocked:
             rb.x, rb.y = nx, ny
-            self._in_contact = False
+        touching = blocked or self._robot_collides(rb.x, rb.y)   # also true if a person walks into us
+        if touching and not self._in_contact:
+            self.collisions += 1
+        self._in_contact = touching
+        for p in self.people:                                     # closest approach, surface to surface
+            self.min_person_gap = min(self.min_person_gap, math.hypot(p.x - rb.x, p.y - rb.y) - p.r - rb.r)
         rb.theta = (th + math.pi) % (2 * math.pi) - math.pi
         self.time += dt
 

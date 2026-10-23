@@ -72,7 +72,8 @@ WALL_H = 3.0
 PERSON_H = 1.7
 PILLAR_H = 3.0
 
-KIND_COLOR = {"wall": (120, 130, 145), "rack": (196, 120, 50)}
+KIND_COLOR = {"wall": (120, 130, 145), "rack": (196, 120, 50), "crate": (150, 112, 72)}
+KIND_HEIGHT = {"wall": WALL_H, "rack": WALL_H, "crate": 1.2}
 
 
 class Camera:
@@ -102,7 +103,7 @@ class Camera:
         for c in range(W):
             if not np.isfinite(d[c]) or zbuf[c] > self.max_range:
                 continue
-            top = int(hor - f * (WALL_H - CAM_H) / zbuf[c])
+            top = int(hor - f * (KIND_HEIGHT[world.segment_kinds[idx[c]]] - CAM_H) / zbuf[c])
             bot = int(hor + f * CAM_H / zbuf[c])
             base = KIND_COLOR[world.segment_kinds[idx[c]]]
             shade = max(0.35, 1.0 - zbuf[c] / (self.max_range * 1.1))

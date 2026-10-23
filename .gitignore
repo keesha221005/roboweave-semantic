@@ -1,10 +1,30 @@
-build/
-install/
-log/
-__pycache__/
-*.pyc
-.vscode/
-collision_report.json
+# Python
 venv/
 .venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Generated data and models (rebuild with make_dataset / train)
+dataset/
+runs/
+yolo_check_out/
+*.pt
+
+# Generated results (rebuild with roboweave.evaluate)
+eval/
+
+# Streamlit / local
+.streamlit/secrets.toml
+camera_test.png
+
+# Secrets
 .env
+*.key
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
